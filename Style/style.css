@@ -87,7 +87,17 @@ a:visited {
 .workout__title {
   font-size: 1.7rem;
   font-weight: 600;
-  grid-column: 1 / -1;
+  grid-column: 1 / span 3;
+  grid-row: 1;
+}
+.workout__tools{
+  grid-column: 4 ;
+  display: flex;
+  gap: 5px;
+  justify-content: flex-end;
+}
+.workout__tools img{
+  width: 24px;
 }
 
 .workout__details {
