@@ -116,6 +116,13 @@ class App {
   }
   errorAlert(headText) {
     this._createAlert("error", headText);
+    const OKbutton = document.querySelector(".alert .OK");
+    OKbutton.addEventListener(
+      "click",
+      (() => {
+        this._hideAlert();
+      }).bind(this)
+    );
   }
   _getPostion() {
     navigator.geolocation?.getCurrentPosition(this._loadMap.bind(this), function () {
@@ -310,12 +317,12 @@ class App {
       if (!this.#workouts.length) sidebarTools.classList.add("hidden");
       workoutEl.remove();
       this._setLocalStorage();
-    } 
+    }
 
-     if (e.target.dataset.tool === "edit") {
+    if (e.target.dataset.tool === "edit") {
       const allDetails = e.target.closest(".workout").querySelector(".all__details");
       allDetails.classList.toggle("none");
-      const parent =allDetails.parentElement;
+      const parent = allDetails.parentElement;
       const editForm = e.target.closest(".workout").querySelector(".form");
       editForm.classList.toggle("none");
       editForm.addEventListener(
@@ -328,14 +335,12 @@ class App {
           data.forEach((el) => {
             if (!el && el != 0) return this.errorAlert("Undefined Data... !  PLease reenter your fields");
           });
-          if (data[0] == "running") 
-          this.#workouts[workoutindex] = new Running(+data[1], +data[2], workout.coords, +data[3]);
-          else 
-          this.#workouts[workoutindex] = new Cycling(+data[1], +data[2], workout.coords, +data[3]);
+          if (data[0] == "running") this.#workouts[workoutindex] = new Running(+data[1], +data[2], workout.coords, +data[3]);
+          else this.#workouts[workoutindex] = new Cycling(+data[1], +data[2], workout.coords, +data[3]);
           this.#workouts[workoutindex].id = workout.id;
           this._setLocalStorage();
         }).bind(this)
-        );
+      );
     }
   }
   _sideBarEvents(e) {
