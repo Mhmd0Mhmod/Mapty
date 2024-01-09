@@ -93,20 +93,29 @@ class App {
       ${type === "confirm" ? `<button class="cancel">Cancel</button>` : `</div>`}
       `;
     alert.insertAdjacentHTML("beforeend", html);
-    const OKbutton = document.querySelector(".alert .OK");
-    const cancelButton = document.querySelector(".alert .cancel");
-    let returned;
-    OKbutton.addEventListener("click", (() => this._hideAlert()).bind(this));
-    if (type === "confirm") cancelButton.addEventListener("click", (() => this._hideAlert()).bind(this));
     this._showAlert();
   }
-  confrimAlert(type, headText) {
-    this._createAlert(type, headText);
-    return true;
+  confrimAlert(headText, workout) {
+    this._createAlert("confirm", headText);
+    const OKbutton = document.querySelector(".alert .OK");
+    const cancelButton = document.querySelector(".alert .cancel");
+    OKbutton.addEventListener(
+      "click",
+      (() => {
+        this._hideAlert();
+        this._addnewWorkout(workout);
+      }).bind(this)
+    );
+    cancelButton.addEventListener(
+      "click",
+      (() => {
+        this._hideAlert();
+        this._hideForm();
+      }).bind(this)
+    );
   }
   errorAlert(headText) {
-    this._createAlert('error',headText);
-    return false;
+    this._createAlert("error", headText);
   }
   _getPostion() {
     navigator.geolocation?.getCurrentPosition(this._loadMap.bind(this), function () {
@@ -161,14 +170,17 @@ class App {
     if (type === "running") {
       const cadence = +inputCadence.value;
       if (!valid(distance, duration, cadence) || !allPos(distance, duration, cadence)) return this.errorAlert("Inputs Take Only Postive Numbers  Please ! Enter Postive Number");
-
       workout = new Running(distance, duration, coords, cadence);
+      this.confrimAlert("Are u sure ?", workout);
     } else {
       //Cycling
       const elevation = +inputElevation.value;
-      if (!valid(distance, duration, elevation) || !allPos(distance, duration))return this.errorAlert("Inputs Take Only Postive Numbers  Please ! Enter Postive Number");
-       workout = new Cycling(distance, duration, coords, elevation);
+      if (!valid(distance, duration, elevation) || !allPos(distance, duration)) return this.errorAlert("Inputs Take Only Postive Numbers  Please ! Enter Postive Number");
+      workout = new Cycling(distance, duration, coords, elevation);
+      this.confrimAlert("Are u sure ?", workout);
     }
+  }
+  _addnewWorkout(workout) {
     // Add object to workout Array
     this.#workouts.push(workout);
     //Mark in map
@@ -201,10 +213,11 @@ class App {
     let html = `
     <li class="workout workout--${workout.type}" data-id="${workout.id}">
           <h2 class="workout__title">${workout.description}</h2>
-          <div class="workout__tools">
+        <div class="workout__tools">
           <span><img src="images/edit_1159633.png" data-tool="edit"/></span>
           <span><img src="images/delete_3405244.png"data-tool="remove" /></span>
         </div>
+        <div class="all__details">
           <div class="workout__details">
             <span class="workout__icon">${workout.type === "running" ? "🏃" : "🚴‍♀️"}</span>
             <span class="workout__value">${workout.distance}</span>
@@ -215,9 +228,9 @@ class App {
             <span class="workout__value">${workout.duration}</span>
             <span class="workout__unit">min</span>
           </div>
-    `;
-    if (workout.type === "running")
-      html += `
+     ${
+       workout.type === "running"
+         ? `
           <div class="workout__details">
             <span class="workout__icon">⚡️</span>
             <span class="workout__value">${workout.pace.toFixed(1)}</span>
@@ -228,11 +241,8 @@ class App {
           <span class="workout__value">${workout.cadence}</span>
           <span class="workout__unit">spm</span>
         </div>
-      </li>
-      `;
-    else
-      html += `
-          <div class="workout__details">
+        </div>`
+         : `<div class="workout__details">
             <span class="workout__icon">⚡️</span>
             <span class="workout__value">${workout.speed.toFixed(1)}</span>
             <span class="workout__unit">km/h</span>
@@ -241,8 +251,39 @@ class App {
           <span class="workout__icon">⛰</span>
           <span class="workout__value">${workout.elevationGain}</span>
           <span class="workout__unit">m</span>
-        </div>
-      </li>
+        </div>`
+     }
+     </div>
+      <form class='form none'>
+      <div class="form__row">
+      <label class="form__label">Type</label>
+      <select class="form__input form__input--type"">
+        <option value="running" ${workout.type === "running" ? "selected" : ""}>Running</option>
+        <option value="cycling" ${workout.type === "cycling" ? "selected" : ""}>Cycling</option>
+      </select>
+    </div>
+      <div class="form__row">
+            <label class="form__label" >Distance</label>
+            <input class="form__input form__input--distance" placeholder="km" value = "${workout.distance}" />
+          </div>
+          <div class="form__row">
+            <label class="form__label" >Duration</label>
+            <input class="form__input form__input--duration" placeholder="min" value =" ${workout.duration}"/>
+          </div>
+          ${
+            workout.type === "running"
+              ? `<div class="form__row">
+            <label class="form__label" >Cadence</label>
+            <input class="form__input form__input--cadence" placeholder="step/min" value = "${workout.cadence}"/>
+          </div>`
+              : `<div class="form__row form__row">
+            <label class="form__label" >Elev Gain</label>
+            <input class="form__input form__input--elevation" placeholder="meters" value = "${workout.elevationGain}" />
+          </div>`
+          }
+          <button class="form__btn">OK</button>
+          </form>
+          </li>
       `;
     form.insertAdjacentHTML("afterend", html);
     sidebarTools.classList.remove("hidden");
@@ -250,26 +291,51 @@ class App {
   _moveToPopup(e) {
     const workoutEl = e.target.closest(".workout");
     if (!workoutEl) return;
-    const workout = this.#workouts.findIndex((wo) => wo.id === workoutEl.dataset.id);
-    this.#map.setView(this.#workouts[workout].coords, 13, {
+    const workoutindex = this.#workouts.findIndex((wo) => wo.id === workoutEl.dataset.id);
+    let workout = this.#workouts[workoutindex];
+    this.#map.setView(workout.coords, 13, {
       animate: true,
       pan: {
         duration: 1,
       },
     });
-    this.#workouts[workout].click();
     if (e.target.dataset.tool === "remove") {
       this.#map.eachLayer((e) => {
         if (e._latlng) {
           let { lat, lng } = e._latlng;
-          if (this.#workouts[workout].coords[0] == lat && this.#workouts[workout].coords[1] == lng) setTimeout(() => e.remove(), 1000);
+          if (workout.coords[0] == lat && workout.coords[1] == lng) setTimeout(() => e.remove(), 1000);
         }
       });
       this.#workouts.splice(workout, 1);
       if (!this.#workouts.length) sidebarTools.classList.add("hidden");
       workoutEl.remove();
       this._setLocalStorage();
-    } else if (e.target.dataset.tool === "edit") {
+    } 
+
+     if (e.target.dataset.tool === "edit") {
+      const allDetails = e.target.closest(".workout").querySelector(".all__details");
+      allDetails.classList.toggle("none");
+      const parent =allDetails.parentElement;
+      const editForm = e.target.closest(".workout").querySelector(".form");
+      editForm.classList.toggle("none");
+      editForm.addEventListener(
+        "submit",
+        ((e) => {
+          let data = [];
+          editForm.querySelectorAll("input,select").forEach((el) => {
+            data.push(el.value);
+          });
+          data.forEach((el) => {
+            if (!el && el != 0) return this.errorAlert("Undefined Data... !  PLease reenter your fields");
+          });
+          if (data[0] == "running") 
+          this.#workouts[workoutindex] = new Running(+data[1], +data[2], workout.coords, +data[3]);
+          else 
+          this.#workouts[workoutindex] = new Cycling(+data[1], +data[2], workout.coords, +data[3]);
+          this.#workouts[workoutindex].id = workout.id;
+          this._setLocalStorage();
+        }).bind(this)
+        );
     }
   }
   _sideBarEvents(e) {
